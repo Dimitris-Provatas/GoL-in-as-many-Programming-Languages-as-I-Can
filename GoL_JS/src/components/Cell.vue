@@ -35,14 +35,42 @@ export default {
       isLowerMost: this.yPos == this.$parent.gridHeight,
     };
   },
+  created() {
+    window.addEventListener("resize", this.calculateHeight);
+  },
+  destroyed() {
+    window.removeEventListener("resize", this.calculateHeight);
+  },
   mounted() {
-    console.log(this.$parent.gridWidth);
-    this.height =
-      this.$refs[`cell[${this.xPos},${this.yPos}]`].clientWidth + "px";
+    this.calculateHeight();
+
+    this.emitter.on("recalculate-height", () => {
+      this.calculateHeight();
+
+      this.$forceUpdate();
+    });
+
+    this.emitter.on("next-tick-update", () => {
+      this.updateState();
+    });
+
+    this.emitter.on("next-tick-commit", () => {
+      this.commitState();
+    });
+
+    this.emitter.on("reset", () => {
+      this.resetState();
+    });
   },
   methods: {
+    calculateHeight() {
+      this.height =
+        this.$refs[`cell[${this.xPos},${this.yPos}]`].clientWidth + "px";
+    },
     updateState() {
-      let countAliveNeighbours = 0;
+      let countAliveNeighbors = 0;
+
+      // console.log("-".repeat(100) + `\nI am shell ${this.xPos}-${this.yPos}\n`);
 
       /**
        * UL UC UR
@@ -50,100 +78,114 @@ export default {
        * DL DC DR
        *
        * UL: cell[${this.xPos - 1},${this.yPos - 1}]
-       * UC: cell[${this.xPos - 1},${this.yPos}]
-       * UR: cell[${this.xPos - 1},${this.yPos + 1}]
-       * L : cell[${this.xPos},${this.yPos - 1}]
+       * UC: cell[${this.xPos},${this.yPos - 1}]
+       * UR: cell[${this.xPos + 1},${this.yPos - 1}]
+       * L : cell[${this.xPos - 1},${this.yPos}]
        * C : cell[${this.xPos},${this.yPos}]
-       * R : cell[${this.xPos},${this.yPos + 1}]
-       * DL: cell[${this.xPos + 1},${this.yPos - 1}]
-       * DC: cell[${this.xPos + 1},${this.yPos}]
+       * R : cell[${this.xPos + 1},${this.yPos}]
+       * DL: cell[${this.xPos - 1},${this.yPos + 1}]
+       * DC: cell[${this.xPos},${this.yPos + 1}]
        * DR: cell[${this.xPos + 1},${this.yPos + 1}]
        */
 
       // UL
-      if (
-        this.$refs[`cell[${this.xPos - 1},${this.yPos - 1}]`].isAlive &&
-        !this.isUpperMost &&
-        !this.isLeftMost
-      ) {
-        countAliveNeighbours++;
+      // console.log(`I look at cell ${this.xPos - 1}-${this.yPos - 1}`);
+      if (!this.isUpperMost && !this.isLeftMost) {
+        if (
+          this.$parent.$refs[`cell[${this.xPos - 1},${this.yPos - 1}]`].isAlive
+        ) {
+          countAliveNeighbors++;
+        }
       }
 
       // UC
-      if (
-        this.$refs[`cell[${this.xPos - 1},${this.yPos}]`].isAlive &&
-        !this.isUpperMost
-      ) {
-        countAliveNeighbours++;
+      // console.log(`I looked at cell ${this.xPos}-${this.yPos - 1} because`);
+      if (!this.isUpperMost) {
+        if (this.$parent.$refs[`cell[${this.xPos},${this.yPos - 1}]`].isAlive) {
+          countAliveNeighbors++;
+        }
       }
 
       // UR
-      if (
-        this.$refs[`cell[${this.xPos - 1},${this.yPos + 1}]`].isAlive &&
-        !this.isUpperMost &&
-        !this.isRightMost
-      ) {
-        countAliveNeighbours++;
+      // console.log(`I looked at cell ${this.xPos + 1}-${this.yPos - 1} because`);
+      if (!this.isUpperMost && !this.isRightMost) {
+        if (
+          this.$parent.$refs[`cell[${this.xPos + 1},${this.yPos - 1}]`].isAlive
+        ) {
+          countAliveNeighbors++;
+        }
       }
 
       // L
-      if (
-        this.$refs[`cell[${this.xPos},${this.yPos - 1}]`].isAlive &&
-        !this.isLeftMost
-      ) {
-        countAliveNeighbours++;
+      // console.log(`I looked at cell ${this.xPos - 1}-${this.yPos} because`);
+      if (!this.isLeftMost) {
+        if (this.$parent.$refs[`cell[${this.xPos - 1},${this.yPos}]`].isAlive) {
+          countAliveNeighbors++;
+        }
       }
 
       // R
-      if (
-        this.$refs[`cell[${this.xPos},${this.yPos + 1}]`].isAlive &&
-        !this.isRightMost
-      ) {
-        countAliveNeighbours++;
+      // console.log(`I looked at cell ${this.xPos + 1}-${this.yPos} because`);
+      if (!this.isRightMost) {
+        if (this.$parent.$refs[`cell[${this.xPos + 1},${this.yPos}]`].isAlive) {
+          countAliveNeighbors++;
+        }
       }
 
       // DL
-      if (
-        this.$refs[`cell[${this.xPos + 1},${this.yPos - 1}]`].isAlive &&
-        !this.isLowerMost &&
-        !this.isLeftMost
-      ) {
-        countAliveNeighbours++;
+      // console.log(`I looked at cell ${this.xPos - 1}-${this.yPos + 1} because`);
+      if (!this.isLowerMost && !this.isLeftMost) {
+        if (
+          this.$parent.$refs[`cell[${this.xPos - 1},${this.yPos + 1}]`].isAlive
+        ) {
+          countAliveNeighbors++;
+        }
       }
 
       // DC
-      if (
-        this.$refs[`cell[${this.xPos + 1},${this.yPos}]`].isAlive &&
-        !this.isLowerMost
-      ) {
-        countAliveNeighbours++;
+      // console.log(`I looked at cell ${this.xPos}-${this.yPos + 1} because`);
+      if (!this.isLowerMost) {
+        if (this.$parent.$refs[`cell[${this.xPos},${this.yPos + 1}]`].isAlive) {
+          countAliveNeighbors++;
+        }
       }
 
       // DR
-      if (
-        this.$refs[`cell[${this.xPos + 1},${this.yPos + 1}]`].isAlive &&
-        !this.isLowerMost &&
-        !this.isRightMost
-      ) {
-        countAliveNeighbours++;
+      // console.log(`I looked at cell ${this.xPos + 1}-${this.yPos + 1} because`);
+      if (!this.isLowerMost && !this.isRightMost) {
+        if (
+          this.$parent.$refs[`cell[${this.xPos + 1},${this.yPos + 1}]`].isAlive
+        ) {
+          countAliveNeighbors++;
+        }
       }
 
+      // console.log(`I found ${countAliveNeighbors} alive cells around me!`);
+
       if (this.isAlive) {
-        if (countAliveNeighbours == 2 || countAliveNeighbours == 3) {
+        if (countAliveNeighbors == 2 || countAliveNeighbors == 3) {
           this.willBeAlive = true;
         } else {
           this.willBeAlive = false;
         }
       } else {
-        if (countAliveNeighbours == 3) {
+        if (countAliveNeighbors == 3) {
           this.willBeAlive = true;
         } else {
           this.willBeAlive = false;
         }
       }
+
+      // console.log(
+      //   `I will be ${this.willBeAlive ? "alive" : "dead"} next tick!\n` +
+      //     "-".repeat(100)
+      // );
     },
     commitState() {
       this.isAlive = this.willBeAlive;
+    },
+    resetState() {
+      this.isAlive = false;
     },
   },
 };
